@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pointycastle/export.dart' hide Padding, State;
+import 'package:pointycastle/src/key_derivation/derivation_parameters.dart';
+import 'package:pointycastle/src/key_derivation/salt_and_iterations_parameter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web3dart/crypto.dart' as web3crypto;
 import 'package:web3dart/web3dart.dart';
