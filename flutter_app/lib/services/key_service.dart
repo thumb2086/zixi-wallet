@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pointycastle/export.dart' hide Padding, State;
@@ -34,7 +35,6 @@ class KeyService {
   static const int _pbkdf2Iterations = 120000;
   static const int _saltLength = 32;
   static const int _nonceLength = 12;
-  static const int _keyLength = 32; // AES-256
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final ECDomainParameters _domain = ECDomainParameters('secp256k1');

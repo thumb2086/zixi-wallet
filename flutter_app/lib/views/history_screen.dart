@@ -33,7 +33,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   int _nextPage = 1;
   bool _hasMore = true;
   bool _loading = false;
-  bool _initialLoaded = false;
 
   @override
   void initState() {
@@ -57,7 +56,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       _cachedHistory.clear();
       _nextPage = 1;
       _hasMore = true;
-      _initialLoaded = false;
     });
     await _loadNextPage();
   }
@@ -90,7 +88,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
         _cachedHistory.addAll(response.history);
         _nextPage = _nextPage + 1;
         _hasMore = response.hasMore;
-        _initialLoaded = true;
       });
     } catch (e) {
       if (mounted) {
@@ -113,7 +110,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       _cachedHistory.clear();
       _nextPage = 1;
       _hasMore = true;
-      _initialLoaded = false;
     });
     await _loadNextPage();
   }
