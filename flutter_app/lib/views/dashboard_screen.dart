@@ -150,7 +150,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  Future<T> _withPinUnlock<T>(Future<T> Function() task) async {
+  Future<TResult> _withPinUnlock<TResult>(Future<TResult> Function() task) async {
     try {
       return await task();
     } on PinRequiredException {

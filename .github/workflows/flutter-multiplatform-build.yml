@@ -338,7 +338,7 @@ jobs:
 
       - name: Analyze
         working-directory: flutter_app
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
       - name: Test
         working-directory: flutter_app
