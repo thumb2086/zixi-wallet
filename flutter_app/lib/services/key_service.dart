@@ -124,28 +124,23 @@ class KeyService {
   }
 
   Future<String> signData(String data, {String? pin}) async {
-    final privateScalar = await _getPrivateScalar(pin: pin);
-    final privateKey = ECPrivateKey(privateScalar, _domain);
+    final hex = await _getPrivateKeyHex(pin: pin);
+    final ethPrivateKey = EthPrivateKey.fromHex(hex);
+    final signature = ethPrivateKey.signPersonalMessage(utf8.encode(data));
 
-    final digest = SHA256Digest().process(Uint8List.fromList(utf8.encode(data)));
+    final rBytes = _bigIntTo32Bytes(signature.r);
+    final sBytes = _bigIntTo32Bytes(signature.s);
+    final sigBytes = Uint8List.fromList([...rBytes, ...sBytes, signature.v]);
+    return web3crypto.bytesToHex(sigBytes, include0x: true);
+  }
 
-    final signer = ECDSASigner(null, HMac(SHA256Digest(), 64));
-    signer.init(true, PrivateKeyParameter<ECPrivateKey>(privateKey));
-
-    final signature = signer.generateSignature(digest) as ECSignature;
-
-    var s = signature.s;
-    final halfN = _domain.n >> 1;
-    if (s > halfN) {
-      s = _domain.n - s;
+  Future<String> _getPrivateKeyHex({String? pin}) async {
+    await ensureKeyPair(pin: pin);
+    final hex = await _readPrivateKeyHex(pin: pin);
+    if (hex == null || hex.isEmpty) {
+      throw Exception('Missing private key');
     }
-
-    final der = _encodeDerSequence([
-      _encodeDerInteger(signature.r),
-      _encodeDerInteger(s),
-    ]);
-
-    return base64Encode(der);
+    return hex;
   }
 
   Future<BigInt> _getPrivateScalar({String? pin}) async {
@@ -365,44 +360,4 @@ class KeyService {
     return result;
   }
 
-  Uint8List _encodeDerInteger(BigInt value) {
-    var bytes = _bigIntToBytes(value);
-    if (bytes.isEmpty) {
-      bytes = Uint8List.fromList([0]);
-    }
-
-    if (bytes.first & 0x80 != 0) {
-      bytes = Uint8List.fromList([0, ...bytes]);
-    }
-
-    return Uint8List.fromList([
-      0x02,
-      ..._encodeDerLength(bytes.length),
-      ...bytes,
-    ]);
-  }
-
-  Uint8List _encodeDerSequence(List<Uint8List> items) {
-    final content = Uint8List.fromList(items.expand((e) => e).toList());
-    return Uint8List.fromList([
-      0x30,
-      ..._encodeDerLength(content.length),
-      ...content,
-    ]);
-  }
-
-  Uint8List _encodeDerLength(int length) {
-    if (length < 128) {
-      return Uint8List.fromList([length]);
-    }
-
-    final bytes = <int>[];
-    var value = length;
-    while (value > 0) {
-      bytes.insert(0, value & 0xFF);
-      value >>= 8;
-    }
-
-    return Uint8List.fromList([0x80 | bytes.length, ...bytes]);
-  }
 }

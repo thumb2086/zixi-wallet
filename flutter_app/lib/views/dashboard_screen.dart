@@ -352,6 +352,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  Future<void> _openConvertFlow() async {
+    if (_walletAddress.isEmpty) return;
+    final controller = TextEditingController();
+    final zxcAmount = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(T.of(context, 'convert')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(T.of(context, 'convert_desc', [_selectedBalance])),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: T.of(context, 'amount'),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(T.of(context, 'cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: Text(T.of(context, 'convert_confirm')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || zxcAmount == null || zxcAmount.isEmpty) return;
+
+    await _runWithLoading(() async {
+      try {
+        final signature = await _withPinUnlock(
+          () => _keyService.signData('convert:$zxcAmount'),
+        );
+        final pubKey = await _withPinUnlock(
+          () => _keyService.getPublicKeySpkiBase64(),
+        );
+        await _withRetriedSession((sessionId) {
+          return _api.convert(
+            sessionId: sessionId,
+            address: _walletAddress,
+            zxcAmount: zxcAmount,
+            signature: signature,
+            publicKey: pubKey,
+          );
+        });
+        if (!mounted) return;
+        _showSnack(T.of(context, 'convert_success'));
+        await Future<void>.delayed(const Duration(seconds: 2));
+        await _syncBalances(forceRefresh: true);
+      } catch (e) {
+        if (!mounted) return;
+        _showSnack(T.of(context, 'failure_message', [e.toString()]));
+      }
+    });
+  }
+
   Future<void> _openHistory() async {
     if (!mounted) return;
     await Navigator.of(context).push(
@@ -914,6 +977,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 icon: Icons.send,
                                 label: T.of(context, 'transfer'),
                                 onTap: () => _openTransferFlow(isMigration: false),
+                              ),
+                              _ActionButton(
+                                icon: Icons.swap_horiz,
+                                label: T.of(context, 'convert'),
+                                onTap: _openConvertFlow,
                               ),
                               _ActionButton(
                                 icon: Icons.swap_horiz,

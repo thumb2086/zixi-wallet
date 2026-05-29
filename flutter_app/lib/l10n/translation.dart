@@ -109,6 +109,10 @@ class T {
       'pin_invalid': 'PIN must be exactly 6 digits',
       'pin_incorrect': 'Incorrect PIN',
       'pin_timeout': 'Session timed out. Please re-enter your PIN.',
+      'convert': 'Convert to YJC',
+      'convert_desc': 'ZXC balance: {1}. Enter ZXC amount to convert to YJC:',
+      'convert_confirm': 'Convert',
+      'convert_success': 'Conversion successful!',
     },
     'zh_TW': {
       'token_symbol': '子熙幣',
@@ -185,6 +189,10 @@ class T {
       'pin_invalid': 'PIN 碼必須為 6 位數字',
       'pin_incorrect': 'PIN 碼錯誤',
       'pin_timeout': '連線逾時，請重新輸入 PIN 碼。',
+      'convert': '兌換成 YJC',
+      'convert_desc': 'ZXC 餘額：{1}。輸入要兌換成 YJC 的 ZXC 數量：',
+      'convert_confirm': '兌換',
+      'convert_success': '兌換成功！',
     },
     'zh_CN': {
       'token_symbol': '子熙币',
@@ -261,6 +269,10 @@ class T {
       'pin_invalid': 'PIN 码必须为 6 位数字',
       'pin_incorrect': 'PIN 码错误',
       'pin_timeout': '连接超时，请重新输入 PIN 码。',
+      'convert': '兑换成 YJC',
+      'convert_desc': 'ZXC 余额：{1}。输入要兑换成 YJC 的 ZXC 数量：',
+      'convert_confirm': '兑换',
+      'convert_success': '兑换成功！',
     },
   };
 

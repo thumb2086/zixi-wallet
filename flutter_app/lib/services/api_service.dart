@@ -165,6 +165,29 @@ class ApiService {
     return (data['txHash'] ?? '').toString();
   }
 
+  Future<String> convert({
+    required String sessionId,
+    required String address,
+    required String zxcAmount,
+    required String signature,
+    required String publicKey,
+  }) async {
+    _normalizeAddress(address);
+    _normalizePublicKey(publicKey);
+    if (signature.trim().isEmpty) {
+      throw Exception('Missing signature');
+    }
+    final json = await _post('v1/wallet/convert', {
+      'sessionId': _normalizeSessionId(sessionId),
+      'address': _normalizeAddress(address),
+      'zxcAmount': zxcAmount,
+      'signature': signature,
+      'publicKey': publicKey,
+    });
+    final data = _unwrapData(json, fallbackError: 'Convert failed');
+    return (data['txHash'] ?? data['reward'] ?? '').toString();
+  }
+
   Future<HistoryResponse> getHistory({
     required String walletAddress,
     required int page,
