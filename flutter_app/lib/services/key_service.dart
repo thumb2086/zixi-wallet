@@ -126,7 +126,7 @@ class KeyService {
   Future<String> signData(String data, {String? pin}) async {
     final hex = await _getPrivateKeyHex(pin: pin);
     final ethPrivateKey = EthPrivateKey.fromHex(hex);
-    final signature = ethPrivateKey.signPersonalMessage(utf8.encode(data));
+    final signature = await ethPrivateKey.signPersonalMessage(utf8.encode(data));
 
     final rBytes = _bigIntTo32Bytes(signature.r);
     final sBytes = _bigIntTo32Bytes(signature.s);
