@@ -85,6 +85,7 @@ class T {
       'auth_confirm_desc':
           'The web app requests wallet linking.\n\nSession ID: {1}\nAddress: {2}',
       'auth_confirm_button': 'Authorize',
+      'auth_external_warning': 'This request came from an external app or webpage. Only approve if you initiated this action.',
       'auth_success_return': 'Authorization complete. You can return to web.',
       'manual_code_entry': 'Manual Code',
       'manual_code_hint': 'Paste session_xxx or dlinker:login:xxx',
@@ -165,6 +166,7 @@ class T {
       'auth_confirm_title': '授權登入請求',
       'auth_confirm_desc': '網頁端請求連結您的錢包。\n\nSession ID: {1}\n地址: {2}',
       'auth_confirm_button': '確認授權',
+      'auth_external_warning': '此請求來自外部應用程式或網頁。請只在您確實要進行此操作時才批准。',
       'auth_success_return': '授權成功，可返回網頁',
       'manual_code_entry': '輸入授權碼',
       'manual_code_hint': '貼上 session_xxx 或 dlinker:login:xxx',
@@ -245,6 +247,7 @@ class T {
       'auth_confirm_title': '授权登录请求',
       'auth_confirm_desc': '网页端请求链接您的钱包。\n\nSession ID: {1}\n地址: {2}',
       'auth_confirm_button': '确认授权',
+      'auth_external_warning': '此请求来自外部应用或网页。请只在您确实要进行此操作时才批准。',
       'auth_success_return': '授权成功，可返回网页',
       'manual_code_entry': '输入授权码',
       'manual_code_hint': '粘贴 session_xxx 或 dlinker:login:xxx',

@@ -70,6 +70,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _pendingAuthSessionId;
   BetRequest? _pendingBet;
   bool _isPromptOpen = false;
+  bool _hasEverAuthorized = false;
+  int _deepLinkFailureCount = 0;
+  DateTime? _deepLinkCooldownUntil;
 
   bool get _scannerSupported {
     if (kIsWeb) return true;
@@ -116,6 +119,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         for (final token in AppToken.supported) token.id: lastBalances[token.id] ?? 0.0,
       };
       _activeSessionId = activeSessionId;
+      _hasEverAuthorized = activeSessionId.isNotEmpty;
       _autoUpdateCheckEnabled = autoUpdateCheckEnabled;
     });
 
@@ -246,14 +250,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (data.isEmpty || data == 'null') return;
 
     final now = DateTime.now();
+
+    // Rate limit: max 5 attempts per 30 seconds
+    if (_deepLinkCooldownUntil != null && now.isBefore(_deepLinkCooldownUntil!)) {
+      debugPrint('Deep link ignored: rate limited');
+      return;
+    }
+
+    // Dedup same link within 5 seconds
     final isDuplicate = _lastHandledDeepLink == data &&
         _lastHandledDeepLinkAt != null &&
-        now.difference(_lastHandledDeepLinkAt!) < const Duration(seconds: 2);
+        now.difference(_lastHandledDeepLinkAt!) < const Duration(seconds: 5);
     if (isDuplicate) return;
 
     _lastHandledDeepLink = data;
     _lastHandledDeepLinkAt = now;
-    await _handlePayload(data);
+
+    // Parse and validate before accepting
+    final sessionId = _extractSessionId(data);
+    if (sessionId != null) {
+      _deepLinkFailureCount = 0;
+      await _handlePayload(data);
+      return;
+    }
+
+    // Not a recognized deep link format
+    _deepLinkFailureCount++;
+    if (_deepLinkFailureCount >= 5) {
+      _deepLinkCooldownUntil = now.add(const Duration(seconds: 30));
+      _deepLinkFailureCount = 0;
+      debugPrint('Deep link rate limit triggered');
+    }
   }
 
   Future<void> _runWithLoading(Future<void> Function() task) async {
@@ -323,7 +350,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
       _lastBalanceSyncAt = DateTime.now();
     } catch (e) {
-      debugPrint('Balance sync failed: $e');
+      if (e is SessionRequiredException) {
+        debugPrint('Balance sync skipped: no authorized session');
+      } else {
+        debugPrint('Balance sync failed: $e');
+      }
     } finally {
       _isSyncingBalance = false;
     }
@@ -390,7 +421,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await _runWithLoading(() async {
       try {
         final signature = await _withPinUnlock(
-          () => _keyService.signData('convert:$zxcAmount'),
+          () => _keyService.signData('convert:$zxcAmount:zhixi'),
         );
         final pubKey = await _withPinUnlock(
           () => _keyService.getPublicKeySpkiBase64(),
@@ -521,7 +552,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           normalizedAmount = normalizedAmount.substring(0, normalizedAmount.length - 2);
         }
 
-        final signature = await _keyService.signData('transfer:$cleanTo:$normalizedAmount');
+        final signature = await _keyService.signData('transfer:$cleanTo:$normalizedAmount:${_selectedToken.id}');
         final publicKey = await _keyService.getPublicKeySpkiBase64();
 
         await _withRetriedSession((sessionId) {
@@ -745,9 +776,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final approved = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: Text(T.of(context, 'auth_confirm_title')),
-            content: Text(
-              T.of(context, 'auth_confirm_desc', [sessionId, _walletAddress]),
+            title: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+                const SizedBox(width: 8),
+                Expanded(child: Text(T.of(context, 'auth_confirm_title'))),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(T.of(context, 'auth_confirm_desc', [sessionId, _walletAddress])),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, size: 16, color: Colors.orange),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          T.of(context, 'auth_external_warning'),
+                          style: const TextStyle(fontSize: 12, color: Colors.orange),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             actions: [
               TextButton(
@@ -770,6 +832,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final pubKey = await _withPinUnlock(() => _keyService.getPublicKeySpkiBase64());
         await _api.sendAuth(sessionId: sessionId, address: _walletAddress, publicKey: pubKey);
         _activeSessionId = sessionId;
+        _hasEverAuthorized = true;
         await AppStorage.setActiveSessionId(sessionId);
         if (!mounted) return;
         _showSnack(T.of(context, 'auth_success_return'));
@@ -813,7 +876,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await _runWithLoading(() async {
       try {
         final signature = await _withPinUnlock(
-          () => _keyService.signData('coinflip:${bet.side}:${bet.amount}'),
+          () => _keyService.signData('coinflip:${bet.side}:${bet.amount}:${_selectedToken.id}'),
         );
         final pubKey = await _withPinUnlock(() => _keyService.getPublicKeySpkiBase64());
         await _withRetriedSession((sessionId) {
@@ -876,6 +939,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (_walletAddress.isEmpty) {
       throw Exception('Session required');
+    }
+
+    // Only auto-renew if user has explicitly authorized at least once
+    if (!_hasEverAuthorized) {
+      throw SessionRequiredException();
     }
 
     final created = await _api.createPendingAuthSession();
@@ -1177,4 +1245,12 @@ class _NavigationCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class SessionRequiredException implements Exception {
+  final String message;
+  SessionRequiredException([this.message = '請掃碼授權以繼續']);
+
+  @override
+  String toString() => message;
 }

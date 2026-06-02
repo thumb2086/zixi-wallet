@@ -26,6 +26,10 @@ firebase-debug.*.log
 *.key
 google-services.json
 
+# 環境變數（含私鑰）
+.env
+.env.*
+
 # Flutter build/cache
 flutter_app/build/
 flutter_app/.dart_tool/
